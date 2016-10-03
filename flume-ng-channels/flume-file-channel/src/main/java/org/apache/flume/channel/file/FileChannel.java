@@ -104,6 +104,7 @@ public class FileChannel extends BasicChannelSemantics {
   private boolean fsyncPerTransaction;
   private int fsyncInterval;
   private boolean checkpointOnClose = true;
+  private boolean isClosedNormally = false;
 
   @Override
   public synchronized void setName(String name) {
@@ -346,8 +347,9 @@ public class FileChannel extends BasicChannelSemantics {
         msg += ". Due to " + startupError.getClass().getName() + ": " +
             startupError.getMessage();
         throw new IllegalStateException(msg, startupError);
+      } else if (isClosedNormally) {
+        throw new IllegalStateException(msg);
       }
-      throw new IllegalStateException(msg);
     }
 
     FileBackedTransaction trans = transactions.get();
@@ -364,7 +366,16 @@ public class FileChannel extends BasicChannelSemantics {
   }
 
   protected int getDepth() {
-    Preconditions.checkState(open, "Channel closed" + channelNameDescriptor);
+    if (!open) {
+      String msg = "Channel closed " + channelNameDescriptor;
+      if (startupError != null) {
+        msg += ". Due to " + startupError.getClass().getName() + ": " +
+                startupError.getMessage();
+        throw new IllegalStateException(msg, startupError);
+      } else if (isClosedNormally) {
+        throw new IllegalStateException(msg);
+      }
+    }
     Preconditions.checkNotNull(log, "log");
     FlumeEventQueue queue = log.getFlumeEventQueue();
     Preconditions.checkNotNull(queue, "queue");
@@ -382,6 +393,7 @@ public class FileChannel extends BasicChannelSemantics {
       }
       log = null;
       queueRemaining = null;
+      isClosedNormally = true;
     }
   }
 
