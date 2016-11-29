@@ -28,10 +28,12 @@ import org.apache.flume.channel.file.FileChannel.FileBackedTransaction;
 import org.apache.flume.channel.file.FlumeEventQueue.InflightEventWrapper;
 import org.apache.flume.conf.Configurables;
 import org.apache.flume.event.EventBuilder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.Before;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +70,9 @@ public class TestFileChannel extends TestFileChannelBase {
 
   private static final Logger LOG = LoggerFactory
           .getLogger(TestFileChannel.class);
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
 
   @Before
   public void setup() throws Exception {
@@ -630,6 +635,26 @@ public class TestFileChannel extends TestFileChannelBase {
       // returned
       Assert.assertEquals(99, events.size());
     }
+  }
+
+  @Test
+  public void testChannelClosedReason() throws Exception {
+    channel.start();
+    channel.stop();
+    testGetDepth();
+    testCreateTransaction();
+  }
+
+  private void testGetDepth() throws Exception {
+    thrown.expect(IllegalStateException.class);
+    thrown.expectMessage("Channel closed [channel=" + channel.getName() + "]");
+    channel.getDepth();
+  }
+
+  private void testCreateTransaction() throws Exception {
+    thrown.expect(IllegalStateException.class);
+    thrown.expectMessage("Channel closed [channel=" + channel.getName() + "]");
+    channel.createTransaction();
   }
 
 }
